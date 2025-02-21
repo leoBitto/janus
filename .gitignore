@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+*.env
+.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Delta Lake
+*.parquet
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+
+# Python wheel and egg files
+*.egg
+*.egg-info
+dist/
+build/
+
+# Database files (PostgreSQL or others)
+*.sql
+*.db

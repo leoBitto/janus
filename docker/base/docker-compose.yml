@@ -1,0 +1,25 @@
+services:
+  app:
+    image: python:3.9
+    container_name: janus_app
+    working_dir: /app
+    volumes:
+      - ../../src:/app
+    ports:
+      - "5000:5000"
+    networks:
+      - janus_network
+
+  postgres:
+    image: postgres:13
+    container_name: janus_postgres
+    env_file:
+      - ../../config/.env  # Carica il file .env per le variabili di ambiente
+    ports:
+      - "5432:5432"
+    networks:
+      - janus_network
+
+networks:
+  janus_network:
+    driver: bridge
