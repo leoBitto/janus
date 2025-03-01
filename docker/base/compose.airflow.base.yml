@@ -1,0 +1,69 @@
+services:
+  # Servizio Airflow - Database (Metastore)
+  airflow-db:
+    image: postgres:13
+    env_file:
+      - ../../src/airflow/config/airflow-db.conf
+    volumes:
+      - airflow_metadata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    networks:
+      - janus_network
+
+  # Servizio Airflow - Webserver
+  airflow-webserver:
+    build:
+      context: ../../src/airflow
+      dockerfile: Dockerfile
+    image: airflow-app:latest
+    env_file:
+      - ../../src/airflow/config/airflow-db.conf
+      - ../../src/airflow/config/airflow.conf
+    environment:
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      - AIRFLOW_CONN_POSTGRES_GOLD=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - ../../src/airflow/dags:/opt/airflow/dags
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8080:8080"
+    command: bash -c "airflow webserver"
+    depends_on:
+      - airflow-db
+      - postgres
+    networks:
+      - janus_network
+
+  # Servizio Airflow - Scheduler
+  airflow-scheduler:
+    build:
+      context: ../../src/airflow
+      dockerfile: Dockerfile
+    image: airflow-app:latest
+    env_file:
+      - ../../src/airflow/config/airflow-db.conf
+      - ../../src/airflow/config/airflow.conf
+    environment:
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      - AIRFLOW_CONN_POSTGRES_GOLD=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - ../../src/airflow/dags:/opt/airflow/dags
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: bash -c "airflow scheduler"
+    depends_on:
+      - airflow-db
+      - postgres
+    networks:
+      - janus_network
+
+# Rete e volumi
+networks:
+  janus_network:
+    external: true
+
+volumes:
+  airflow_metadata:

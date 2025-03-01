@@ -1,0 +1,127 @@
+services:
+  postgres:
+    image: postgres:13
+    container_name: janus_postgres
+    env_file:
+      - ../../config/.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../data/gold:/data/gold
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - janus_network
+
+  airflow-db:
+    image: postgres:13
+    env_file:
+      - ../../src/airflow/config/airflow-db.conf
+    volumes:
+      - airflow_metadata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - janus_network
+
+  airflow-webserver:
+    build:
+      context: ../../src/airflow
+      dockerfile: Dockerfile
+    image: airflow-app:latest
+    env_file:
+      - ../../src/airflow/config/airflow-db.conf
+      - ../../src/airflow/config/airflow.conf
+    environment:
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      - AIRFLOW_CONN_POSTGRES_GOLD=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - ../../src/airflow/dags:/opt/airflow/dags
+      - ../../data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8080:8080"
+    command: bash -c "airflow webserver"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - janus_network
+
+  airflow-scheduler:
+    build:
+      context: ../../src/airflow
+      dockerfile: Dockerfile
+    image: airflow-app:latest
+    env_file:
+      - ../../src/airflow/config/airflow-db.conf
+      - ../../src/airflow/config/airflow.conf
+    environment:
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      - AIRFLOW_CONN_POSTGRES_GOLD=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    volumes:
+      - ../../src/airflow/dags:/opt/airflow/dags
+      - ../../data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: bash -c "airflow scheduler"
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - janus_network
+
+  streamlit:
+    image: streamlit/streamlit:latest
+    container_name: janus_streamlit
+    env_file:
+      - ../../config/.env
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../../src/streamlit:/app
+    working_dir: /app
+    command: streamlit run app.py
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8501/_stcore/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - janus_network
+
+networks:
+  janus_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  airflow_metadata:

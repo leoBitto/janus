@@ -1,0 +1,22 @@
+services:
+  # Servizio Streamlit
+  streamlit:
+    image: streamlit/streamlit:latest
+    container_name: janus_streamlit
+    env_file:
+      - ../../config/.env
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../../src/streamlit:/app
+    working_dir: /app
+    command: streamlit run app.py
+    depends_on:
+      - postgres
+    networks:
+      - janus_network
+
+# Rete
+networks:
+  janus_network:
+    external: true

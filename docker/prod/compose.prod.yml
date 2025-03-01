@@ -1,0 +1,32 @@
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"  # Only accessible locally
+    environment:
+      - POSTGRES_DB=janus_prod
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+  
+  airflow-webserver:
+    ports:
+      - "127.0.0.1:8080:8080"  # Only accessible locally
+    environment:
+      - AIRFLOW__WEBSERVER__DEBUG=False
+      - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=False
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+  
+  streamlit:
+    ports:
+      - "127.0.0.1:8501:8501"  # Only accessible locally
+    environment:
+      - STREAMLIT_ENV=production
+      - STREAMLIT_DEBUG=false
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3

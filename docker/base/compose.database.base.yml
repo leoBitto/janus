@@ -1,0 +1,21 @@
+services:
+  # Servizio PostgreSQL
+  postgres:
+    image: postgres:13
+    container_name: janus_postgres
+    env_file:
+      - ../../config/.env  # File .env per le variabili di ambiente
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Volume per persistenza dei dati
+    networks:
+      - janus_network
+
+# Rete e volumi
+networks:
+  janus_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
